@@ -1,19 +1,20 @@
-FROM debian:latest
-WORKDIR /home/projects
+FROM centos:6.9
 
-# Install basic packages.
-RUN apt-get update
-RUN apt-get install -y gcc g++ make
-RUN apt-get install -y software-properties-common zsh curl wget git htop unzip vim telnet less
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN yum install -y gcc-c++ cmake openssh-server rsync centos-release-scl
+RUN yum install -y devtoolset-6-gdb
 
-# Install oh-my-zsh and define zsh as default shell
-RUN wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - | zsh || true &&\
-    chsh -s /bin/zsh
+RUN curl -L https://github.com/Kitware/CMake/releases/download/v3.15.5/cmake-3.15.5-Linux-x86_64.sh -o ./cmake3.sh
+RUN chmod +x ./cmake3.sh
+RUN ./cmake3.sh --skip-license --exclude-subdir --prefix=/usr/local
 
-# Apply custom theme, disable auto-update and fix backspace displaying space in the prompt
-RUN sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="candy"/g' /root/.zshrc &&\
-    sed -i 's/# DISABLE_AUTO_UPDATE=true/DISABLE_AUTO_UPDATE=true/g' /root/.zshrc &&\
-    echo TERM=xterm >> /root/.zshrc
+RUN passwd -d root
 
-CMD ["/bin/zsh"]
+RUN sed -i 's/#PermitEmptyPasswords no/PermitEmptyPasswords yes/' /etc/ssh/sshd_config
+RUN sed -i 's/#PermitRootLogin yes/PermitRootLogin yes/' /etc/ssh/sshd_config
+RUN sed -i 's/UsePAM yes/UsePAM no/' /etc/ssh/sshd_config
+
+#RUN sed -i 's/exec/#exec/' /etc/init/tty.conf
+RUN sed -i 's/ACTIVE_CONSOLES=\/dev\/tty\[1-6\]/ACTIVE_CONSOLES=/' /etc/sysconfig/init
+
+RUN /etc/init.d/sshd start
+CMD ["/sbin/init"]
